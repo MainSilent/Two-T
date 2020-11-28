@@ -1,4 +1,4 @@
-const strings = require('../strings');
+const config = require('../config');
 const Discord = require('discord.js');
 
 class bot {
@@ -15,14 +15,14 @@ class bot {
         let found = false
         let channel_count = 0
         guild.channels.cache.find(channel => {
-            if (channel.name == strings.channel_name) {
+            if (channel.name == config.channel_name) {
                 //console.log(channel.id);
                 found = true
                 this.welcome_message(channel)
             }
             // create new channel
             else if (!found && guild.channels.cache.size === ++channel_count) {
-                guild.channels.create(strings.channel_name, { type: 'text' })
+                guild.channels.create(config.channel_name, { type: 'text' })
                   .then(channel => { 
                     //console.log(channel.id)
                     this.welcome_message(channel)
@@ -38,7 +38,7 @@ class bot {
         const welcomeEmbed = {
             color: 0x0099ff,
             title: 'Welcome to Two T!  🥳',
-            description: 'This bot could clone your voice and uses your voice as TTS! 😳',
+            description: 'This bot can clone your voice and use it as TTS!  😳',
             files: [
                 attachment
             ],
@@ -51,26 +51,27 @@ class bot {
                     value: '\u200b'
                 },
                 {
-                    name: 'What does Two T mean? 🤔',
+                    name: 'What does Two T mean?  🤔',
                     value: 'In persian Two T means parrot(طوطی), \
-                        but the real pronounciation is TwoTee. 😎',
+                        but the real pronounciation is TwoTee.',
                 },
                 {
                     name: '\u200b',
                     value: '\u200b',
                 },
                 {
-                    name: '⚠ Warning! ⚠',
-                    value: 'Some value here',
+                    name: '⚠  Warning!  ⚠',
+                    value: 'This bot is only for entertainment purposes, \
+                        and you may not use it for scams, blackmails and etc.\n \
+                        This is why we have implemented security features to avoid this problem.',
                 },
                 {
                     name: '\u200b',
                     value: '\u200b',
                 },
                 {
-                    name: 'For more information checkout our website 🌐',
-                    url: '',
-                    value: '\u200b'
+                    name: 'For more information checkout our website:',
+                    value: 'https://github.com/MainSilent/Two-T'
                 }
             ],
             timestamp: new Date(),
