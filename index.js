@@ -1,5 +1,5 @@
 const discord = require('./modules/discord')
-const token = require('./strings.json').token
+const token = require('./config.json').token
 
 const bot = new discord.bot(token);
 
