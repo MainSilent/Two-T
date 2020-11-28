@@ -1,0 +1,15 @@
+{
+  "name": "two-t",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "MainSilent",
+  "license": "ISC",
+  "dependencies": {
+    "discord.js": "^12.5.1",
+    "opusscript": "0.0.7"
+  }
+}
