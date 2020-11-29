@@ -54,6 +54,12 @@ bot.client.on('channelUpdate', channel => {
         .catch(err => bot.error_message(bot.first_text_channel(channel.guild), "Error in channelUpdate event", err))
 })
 
+// delete messages that are not from the bot
+bot.client.on('message', message => {
+    if(message.channel.name === config.channel_name && message.author.username !== config.username)
+        message.delete()
+})
+
 // send the welcome message if it gets 'deleted'
 bot.client.on('messageDelete', message => {
     message.channel.name === config.channel_name &&
