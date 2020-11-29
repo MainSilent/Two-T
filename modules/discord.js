@@ -11,29 +11,35 @@ class bot {
     }
     
     text_channel(guild) {
-        // check if the channel exists, if not create one.
-        let found = false
-        let channel_count = 0
-        guild.channels.cache.find(channel => {
-            if (channel.name == config.channel_name) {
-                //console.log(channel.id);
-                found = true
-                this.welcome_message(channel)
-            }
-            // create new channel
-            else if (!found && guild.channels.cache.size === ++channel_count) {
-                guild.channels.create(config.channel_name, { type: 'text' })
-                  .then(channel => { 
-                    //console.log(channel.id)
+        try {
+            // check if the channel exists, if not create one.
+            let found = false
+            let channel_count = 0
+            var error_msg = `Error in creating channel for ${guild.name}`
+            guild.channels.cache.find(channel => {
+                if (channel.name == config.channel_name) {
+                    //console.log(channel.id);
+                    found = true
                     this.welcome_message(channel)
-                  })
-                  .catch(err => console.log(`Error cannot create channel for: ${guild.name}\n ${err}`))
-            }
-        })
+                }
+                // create new channel
+                else if (!found && guild.channels.cache.size === ++channel_count) {
+                    guild.channels.create(config.channel_name, { type: 'text' })
+                    .then(channel => { 
+                        //console.log(channel.id)
+                        this.welcome_message(channel)
+                    })
+                    .catch(err => this.error_message(this.first_text_channel(guild), error_msg, err))
+                }
+            })
+        }
+        catch (err) {
+            this.error_message(this.first_text_channel(guild), error_msg, err)
+        }
     }
 
     welcome_message(channel) {
-        channel.bulkDelete(100)
+        var error_msg = `Error in sending welcome message to ${channel.name}`
         const attachment = new Discord.MessageAttachment('logo.png');
         const welcomeEmbed = {
             color: 0x0099ff,
@@ -77,7 +83,34 @@ class bot {
             timestamp: new Date(),
         }
         
+        channel.bulkDelete(100)
+            .catch(err => this.error_message(channel, error_msg, err))
         channel.send({ embed: welcomeEmbed })
+            .catch(err => this.error_message(channel, error_msg, err))
+    }
+
+    error_message(channel, msg, full_msg = null) {
+        if (!channel) return
+        const welcomeEmbed = {
+            color: 0xff0000,
+            title: '🔴  Error!  🔴',
+            description: msg,
+            fields: [
+                {
+                    name: 'Full details:', 
+                    value: full_msg
+                }
+            ],
+            timestamp: new Date(),
+        }
+        
+        channel.send({ embed: welcomeEmbed })
+        console.log(msg + "\n  " + full_msg)
+    }
+
+    first_text_channel(guild) {
+        let channels = guild.channels.cache
+        return channels.find(channel => channel.type === 'text' && channel.permissionsFor(guild.me).has('SEND_MESSAGES'))
     }
 
     show_count() {
