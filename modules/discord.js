@@ -9,7 +9,7 @@ class bot {
         // store number of guilds
         this.count = 0
     }
-    
+
     text_channel(guild) {
         try {
             // check if the channel exists, if not create one.
@@ -24,16 +24,17 @@ class bot {
                 }
                 // create new channel
                 else if (!found && guild.channels.cache.size === ++channel_count) {
-                    guild.channels.create(config.channel_name, { type: 'text' })
-                    .then(channel => { 
-                        //console.log(channel.id)
-                        this.welcome_message(channel)
-                    })
-                    .catch(err => this.error_message(this.first_text_channel(guild), error_msg, err))
+                    guild.channels.create(config.channel_name, {
+                            type: 'text'
+                        })
+                        .then(channel => {
+                            //console.log(channel.id)
+                            this.welcome_message(channel)
+                        })
+                        .catch(err => this.error_message(this.first_text_channel(guild), error_msg, err))
                 }
             })
-        }
-        catch (err) {
+        } catch (err) {
             this.error_message(this.first_text_channel(guild), error_msg, err)
         }
     }
@@ -51,8 +52,7 @@ class bot {
             thumbnail: {
                 url: 'attachment://logo.png',
             },
-            fields: [
-                {
+            fields: [{
                     name: '\u200b',
                     value: '\u200b'
                 },
@@ -82,11 +82,26 @@ class bot {
             ],
             timestamp: new Date(),
         }
-        
-        channel.bulkDelete(100)
-            .catch(err => this.error_message(channel, error_msg, err))
-        channel.send({ embed: welcomeEmbed })
-            .catch(err => this.error_message(channel, error_msg, err))
+
+        // check if the message already exists
+        channel.messages.fetch().then(messages => {
+            // if not send the message
+            /* the reason we use try and catch is because when we try to access 'messages.last().embeds[0].title'
+            it gives an error, i tried '!' but i need to do that for all possibilities, so this is easier */
+            try {
+                if (messages.last().embeds[0].title !== welcomeEmbed.title) {
+                    channel.bulkDelete(100)
+                        .catch(err => this.error_message(channel, error_msg, err))
+                    channel.send({ embed: welcomeEmbed })
+                        .catch(err => this.error_message(channel, error_msg, err))
+                }
+            } catch (err) {
+                channel.bulkDelete(100)
+                    .catch(err => this.error_message(channel, error_msg, err))
+                channel.send({ embed: welcomeEmbed })
+                    .catch(err => this.error_message(channel, error_msg, err))
+            }
+        }).catch(err => this.error_message(channel, error_msg, err))
     }
 
     error_message(channel, msg, full_msg = null) {
@@ -95,17 +110,17 @@ class bot {
             color: 0xff0000,
             title: '🔴  Error!  🔴',
             description: msg,
-            fields: [
-                {
-                    name: 'Full details:', 
-                    value: full_msg
-                }
-            ],
+            fields: [{
+                name: 'Full details:',
+                value: full_msg
+            }],
             timestamp: new Date(),
         }
-        
-        channel.send({ embed: welcomeEmbed })
-        console.log(msg + "\n  " + full_msg)
+
+        channel.send({
+            embed: welcomeEmbed
+        })
+        console.error(msg + "\n  " + full_msg)
     }
 
     first_text_channel(guild) {
@@ -116,7 +131,7 @@ class bot {
     show_count() {
         let last_count
         setInterval(() => {
-            if(last_count !== this.count) {
+            if (last_count !== this.count) {
                 last_count = this.count
                 console.log("servers: " + this.count)
             }

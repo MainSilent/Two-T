@@ -32,26 +32,32 @@ bot.client.on('channelDelete', channel => {
             if (entry.changes[0].old == config.channel_name)
                 bot.text_channel(channel.guild)
         })
-        .catch(error => console.error(error))
+        .catch(err => bot.error_message(bot.first_text_channel(channel.guild), "Error in channelDelete event", err))
 })
 
 // create the text channel if it gets 'updated'
 bot.client.on('channelUpdate', channel => {
     // get the channel ID
-    const channelDeleteId = channel.id;
+    const channelUpdateId = channel.id;
 
     // finds all channel updates in the log
     channel.guild.fetchAuditLogs({
             'type': 'CHANNEL_UPDATE'
         })
         // find the log entry for this specific channel
-        .then(logs => logs.entries.find(entry => entry.target.id == channelDeleteId))
+        .then(logs => logs.entries.find(entry => entry.target.id == channelUpdateId))
         .then(entry => {
             // if it was updated create a new one
             if (entry && entry.changes[0].old == config.channel_name)
                 bot.text_channel(channel.guild)
         })
-        .catch(error => console.error(error))
+        .catch(err => bot.error_message(bot.first_text_channel(channel.guild), "Error in channelUpdate event", err))
+})
+
+// send the welcome message if it gets 'deleted'
+bot.client.on('messageDelete', message => {
+    message.channel.name === config.channel_name &&
+        bot.welcome_message(message.channel)
 })
 
 //joined a guild
