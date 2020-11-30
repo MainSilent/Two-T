@@ -1,11 +1,13 @@
-const config = require('../config');
-const Discord = require('discord.js');
+const config = require('../config')
+const Discord = require('discord.js')
+const { Reaction } = require('./reaction')
 
-class bot {
+class bot extends Reaction {
     constructor(token) {
+        super()
+
         this.client = new Discord.Client();
         this.client.login(token)
-
         // store number of guilds
         this.count = 0
     }
@@ -85,20 +87,33 @@ class bot {
 
         // check if the message already exists
         channel.messages.fetch().then(messages => {
-            // if not send the message
+            // if not, send the message
             /* the reason we use try and catch is because when we try to access 'messages.last().embeds[0].title'
             it gives an error, i tried '!' but i need to do that for all possibilities, so this is easier */
             try {
                 if (messages.last().embeds[0].title !== welcomeEmbed.title) {
                     channel.bulkDelete(100)
+                        .then(() => {
+                            channel.send({ embed: welcomeEmbed })
+                                .then(message => {
+                                    message.react("▶")
+                                    this.start(message)
+                                })
+                                .catch(err => this.error_message(channel, error_msg, err))
+                        })
                         .catch(err => this.error_message(channel, error_msg, err))
-                    channel.send({ embed: welcomeEmbed })
-                        .catch(err => this.error_message(channel, error_msg, err))
-                }
+                } else 
+                    this.start(messages.last())
             } catch (err) {
                 channel.bulkDelete(100)
-                    .catch(err => this.error_message(channel, error_msg, err))
-                channel.send({ embed: welcomeEmbed })
+                    .then(() => {
+                        channel.send({ embed: welcomeEmbed })
+                            .then(message => {
+                                message.react("▶")
+                                this.start(message)
+                            })
+                            .catch(err => this.error_message(channel, error_msg, err))
+                    })
                     .catch(err => this.error_message(channel, error_msg, err))
             }
         }).catch(err => this.error_message(channel, error_msg, err))
