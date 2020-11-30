@@ -102,8 +102,7 @@ class bot extends Reaction {
                                 .catch(err => this.error_message(channel, error_msg, err))
                         })
                         .catch(err => this.error_message(channel, error_msg, err))
-                } else 
-                    this.start(messages.last())
+                }
             } catch (err) {
                 channel.bulkDelete(100)
                     .then(() => {

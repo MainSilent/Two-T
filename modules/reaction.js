@@ -3,10 +3,9 @@ const config = require('../config')
 class Reaction {
     start(message) {
         let inProgress = false
-        message.awaitReactions((reaction, user) => { 
-            const conditionA = reaction.emoji.name === '▶' && user.username !== config.username
-            const conditionB = reaction.count == 2 && inProgress === false
-            if (conditionA && conditionB) {
+        message.awaitReactions((reaction, user) => {  
+            const condition = reaction.emoji.name === '▶' && user.username !== config.username
+            if (inProgress === false && condition) {
                 inProgress = true
                 let noteEmbed = {
                     color: 0xe6e600,
@@ -16,7 +15,7 @@ class Reaction {
                     2- only you and members with kick and ban permission can restart the bot. \n \
                     3- if you get out of the voice channel, the bot will automatically restart."
                 }
-        
+
                 message.channel.send({ embed: noteEmbed })
             }
         })
