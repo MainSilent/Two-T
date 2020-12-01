@@ -10,6 +10,7 @@ class bot extends Reaction {
         this.client.login(token)
         // store number of guilds
         this.count = 0
+        this.Shutdown = false
     }
 
     text_channel(guild) {
@@ -142,6 +143,11 @@ class bot extends Reaction {
         return channels.find(channel => channel.type === 'text' && channel.permissionsFor(guild.me).has('SEND_MESSAGES'))
     }
 
+    bot_text_channel(guild) {
+        let channels = guild.channels.cache
+        return channels.find(channel => channel.type === 'text' && channel.name === config.channel_name)
+    }
+
     show_count() {
         let last_count
         setInterval(() => {
@@ -150,6 +156,29 @@ class bot extends Reaction {
                 console.log("servers: " + this.count)
             }
         }, 1000);
+    }
+
+    shutdown() {
+        let count_sends = 0
+        this.Shutdown = true
+        const shutdownEmbed = {
+            color: 0xff0000,
+            title: 'The bot has been Shut down!',
+            description: "This could happen when it's under maintenance or something really bad happened. \n \
+            It will send the welcome message when it gets back online.",
+            timestamp: new Date()
+        }
+
+        this.client.guilds.cache.forEach(guild => {
+            const text_channel = this.bot_text_channel(guild)
+            text_channel.bulkDelete(100)
+                .then(() => text_channel.send({ embed: shutdownEmbed }).then(count_sends++))
+
+            if (this.client.guilds.cache.size === count_sends) {
+                console.log("All shut down messages have been sent.")
+                process.exit(0)
+            }
+        })
     }
 }
 

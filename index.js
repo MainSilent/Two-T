@@ -62,7 +62,7 @@ bot.client.on('message', message => {
 
 // send the welcome message if it gets 'deleted'
 bot.client.on('messageDelete', message => {
-    message.channel.name === config.channel_name &&
+    if (!bot.Shutdown && message.channel.name === config.channel_name)
         bot.welcome_message(message.channel)
 })
 
@@ -76,6 +76,9 @@ bot.client.on("guildCreate", guild => {
 bot.client.on("guildDelete", guild => {
     bot.count--
 })
+
+// send shutdown message
+//process.on('SIGINT', () => bot.shutdown())
 
 // handle errors
 process.on('uncaughtException', err => {
