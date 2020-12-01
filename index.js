@@ -56,14 +56,30 @@ bot.client.on('channelUpdate', channel => {
 
 // delete messages that are not from the bot
 bot.client.on('message', message => {
-    if(message.channel.name === config.channel_name && message.author.username !== config.username)
+    if (message.channel.name === config.channel_name && message.author.username !== config.username)
         message.delete()
 })
 
 // send the welcome message if it gets 'deleted'
 bot.client.on('messageDelete', message => {
-    if (!bot.Shutdown && message.channel.name === config.channel_name)
-        bot.welcome_message(message.channel)
+    if (!bot.Shutdown && message.channel.name === config.channel_name) {
+        const channel = message.channel
+        var error_msg = `Error in sending welcome message to ${channel.name}`
+        // check if the message already exists
+        channel.messages.fetch().then(messages => {
+            // if not, send the message
+            /* the reason we use try and catch is because when we try to access 'messages.last().embeds[0].title'
+            it gives an error, i tried '!' but i need to do that for all possibilities, so this is easier */
+            try {
+                if (messages.last().embeds[0].title !== welcomeEmbed.title) {
+                    console.log("deleted");
+                }
+            } 
+            catch (err) {
+                console.log("deleted");
+            }
+        }).catch(err => bot.error_message(channel, error_msg, err))
+    }
 })
 
 //joined a guild

@@ -86,37 +86,18 @@ class bot extends Reaction {
             timestamp: new Date(),
         }
 
-        // check if the message already exists
-        channel.messages.fetch().then(messages => {
-            // if not, send the message
-            /* the reason we use try and catch is because when we try to access 'messages.last().embeds[0].title'
-            it gives an error, i tried '!' but i need to do that for all possibilities, so this is easier */
-            try {
-                if (messages.last().embeds[0].title !== welcomeEmbed.title) {
-                    channel.bulkDelete(100)
-                        .then(() => {
-                            channel.send({ embed: welcomeEmbed })
-                                .then(message => {
-                                    message.react("▶")
-                                    this.start(message)
-                                })
-                                .catch(err => this.error_message(channel, error_msg, err))
-                        })
-                        .catch(err => this.error_message(channel, error_msg, err))
-                }
-            } catch (err) {
-                channel.bulkDelete(100)
-                    .then(() => {
-                        channel.send({ embed: welcomeEmbed })
-                            .then(message => {
-                                message.react("▶")
-                                this.start(message)
-                            })
-                            .catch(err => this.error_message(channel, error_msg, err))
+        channel.bulkDelete(100)
+            .then(() => {
+                channel.send({
+                        embed: welcomeEmbed
+                    })
+                    .then(message => {
+                        message.react("▶")
+                        this.start(message)
                     })
                     .catch(err => this.error_message(channel, error_msg, err))
-            }
-        }).catch(err => this.error_message(channel, error_msg, err))
+            })
+            .catch(err => this.error_message(channel, error_msg, err))
     }
 
     error_message(channel, msg, full_msg = null) {
@@ -172,7 +153,9 @@ class bot extends Reaction {
         this.client.guilds.cache.forEach(guild => {
             const text_channel = this.bot_text_channel(guild)
             text_channel.bulkDelete(100)
-                .then(() => text_channel.send({ embed: shutdownEmbed }).then(count_sends++))
+                .then(() => text_channel.send({
+                    embed: shutdownEmbed
+                }).then(count_sends++))
 
             if (this.client.guilds.cache.size === count_sends) {
                 console.log("All shut down messages have been sent.")
