@@ -60,7 +60,8 @@ bot.client.on('message', message => {
         message.delete()
 })
 
-// send the welcome message if it gets 'deleted'
+/* send the welcome message if it gets 'deleted'
+before this need to find a way to check who deleted, because it fires when the bot delete the message */
 bot.client.on('messageDelete', message => {
     if (!bot.Shutdown && message.channel.name === config.channel_name) {
         const channel = message.channel
@@ -71,12 +72,12 @@ bot.client.on('messageDelete', message => {
             /* the reason we use try and catch is because when we try to access 'messages.last().embeds[0].title'
             it gives an error, i tried '!' but i need to do that for all possibilities, so this is easier */
             try {
-                if (messages.last().embeds[0].title !== welcomeEmbed.title) {
-                    console.log("deleted");
+                if (!messages.last().embeds[0].title.includes('Welcome to Two T!')) {
+                    //bot.welcome_message(channel)
                 }
-            } 
+            }
             catch (err) {
-                console.log("deleted");
+                //bot.welcome_message(channel)
             }
         }).catch(err => bot.error_message(channel, error_msg, err))
     }
