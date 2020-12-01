@@ -4,16 +4,20 @@ const discord = require('./discord')
 class Reaction {
     constructor(message) {
         this.start(message)
+        this.isRestart = false
         this.welcome_message = new discord.bot().welcome_message
+        this.error_message = new discord.bot().error_message
     }
+
     start(message) {
         let inProgress = false
         message.awaitReactions((reaction, user) => {
             const member = message.guild.members.cache.get(user.id)
-            const condition = reaction.emoji.name === '▶' && user.username !== config.username
+            const condition = inProgress === false && reaction.emoji.name === '▶' && user.username !== config.username
             if (!member.voice.channel && condition) {
                 this.join_voice_channel(message.channel, user)
-            } else if (inProgress === false && condition) {
+            } else if (condition) {
+                const voiceChannel = member.voice.channel
                 inProgress = true
                 let noteEmbed = {
                     color: 0xe6e600,
@@ -26,11 +30,13 @@ class Reaction {
 
                 message.channel.send({
                     embed: noteEmbed
-                })
-                member.voice.channel.join()
+                }).catch(err => this.error_message(message.channel, "Error in sending note embed", err))
+                voiceChannel.join()
+                setTimeout(() => {
+                    this.voice_record(member, voiceChannel, message.channel)
+                }, 2000);
                 
                 // restart if the user disconnected
-                const voiceChannel = member.voice.channel
                 const setint = setInterval(() => {
                     if (!member.voice.channel) {
                         this.restart(voiceChannel, message.channel)
@@ -41,11 +47,57 @@ class Reaction {
         })
     }
 
+    voice_record(member, voice, text) {
+        const recordEmbed = {
+            color: 0x2eb82e,
+            title: 'First we need 10 seconds sample from your voice.',
+            description: 'Press ⏺ to start recording.\nIf you are not sure what to say, you can press 📗 to get suggestions.',
+            fields: [{
+                name: 'Note:',
+                value: 'The cleaner and louder you talk, The better the TTS samples will be.'
+            }],
+            footer: {
+                text: 'Wait until all 3 reactions get send'
+            },
+            timestamp: new Date()
+        }
+
+        text.send({ embed: recordEmbed })
+            .then(async message => {
+                await message.react('⏺')
+                await message.react('📗')
+                await message.react('🔄')
+
+                message.awaitReactions((reaction, user) => {
+                    if (user.username !== config.username) {
+                        const member2 = message.guild.members.cache.get(user.id)
+                        switch(reaction.emoji.name)
+                        {
+                            case '⏺':
+                                // start recording
+                                break
+                            case '📗':
+                                !this.isRestart && text.send("khkhk")
+                                break
+                            case '🔄':
+                                if (member.id === member2.id || member2.permissions.has('KICK_MEMBERS') || member2.permissions.has('BAN_MEMBERS'))
+                                    this.restart(voice, text)
+                                break
+                        }
+                    }
+                })
+            })
+            .catch(err => this.error_message(text, "Error in sending record embed", err))
+    }
+
     restart(voiceChannel, textChannel) {
-        textChannel.send("Restarting...").then(() => {
-            voiceChannel.leave()
-            this.welcome_message(textChannel)
-        })
+        if (!this.isRestart) {
+            this.isRestart = true
+            textChannel.send("Restarting...").then(() => {
+                voiceChannel.leave()
+                this.welcome_message(textChannel)
+            }).catch(err => this.error_message(textChannel, "Error in sending restart message", err))
+        }
     }
 
     join_voice_channel(channel, user) {
@@ -54,11 +106,13 @@ class Reaction {
             if (lastMessage.content.includes("You need to join a voice channel")) {
                 lastMessage.delete().then(() => {
                     channel.send(`<@${user.id}>, You need to join a voice channel.`)
+                        .catch(err => this.error_message(channel, "Error in sending join a voice channel message", err))
                 })
             }
         } 
         catch (err) {
             channel.send(`<@${user.id}>, You need to join a voice channel.`)
+                .catch(err => this.error_message(channel, "Error in sending join a voice channel message", err))
         }
     }
 }

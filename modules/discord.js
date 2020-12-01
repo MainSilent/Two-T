@@ -28,7 +28,8 @@ class bot {
                 // create new channel
                 else if (!found && guild.channels.cache.size === ++channel_count) {
                     guild.channels.create(config.channel_name, {
-                            type: 'text'
+                            type: 'text',
+                            topic: '▶ = start, 🔄 = restart'
                         })
                         .then(channel => {
                             //console.log(channel.id)
