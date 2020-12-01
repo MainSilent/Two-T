@@ -2,12 +2,12 @@ const config = require('../config')
 const Discord = require('discord.js')
 const { Reaction } = require('./reaction')
 
-class bot extends Reaction {
+class bot {
     constructor(token) {
-        super()
-
-        this.client = new Discord.Client();
-        this.client.login(token)
+        if (token) {
+            this.client = new Discord.Client();
+            this.client.login(token)
+        }
         // store number of guilds
         this.count = 0
         this.Shutdown = false
@@ -93,7 +93,7 @@ class bot extends Reaction {
                     })
                     .then(message => {
                         message.react("▶")
-                        this.start(message)
+                        new Reaction(message)
                     })
                     .catch(err => this.error_message(channel, error_msg, err))
             })

@@ -1,6 +1,11 @@
 const config = require('../config')
+const discord = require('./discord')
 
 class Reaction {
+    constructor(message) {
+        this.start(message)
+        this.welcome_message = new discord.bot().welcome_message
+    }
     start(message) {
         let inProgress = false
         message.awaitReactions((reaction, user) => {
@@ -23,7 +28,23 @@ class Reaction {
                     embed: noteEmbed
                 })
                 member.voice.channel.join()
+                
+                // restart if the user disconnected
+                const voiceChannel = member.voice.channel
+                const setint = setInterval(() => {
+                    if (!member.voice.channel) {
+                        this.restart(voiceChannel, message.channel)
+                        clearInterval(setint)
+                    }
+                }, 1000)
             }
+        })
+    }
+
+    restart(voiceChannel, textChannel) {
+        textChannel.send("Restarting...").then(() => {
+            voiceChannel.leave()
+            this.welcome_message(textChannel)
         })
     }
 
