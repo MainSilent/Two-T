@@ -4,6 +4,7 @@ const discord = require('./discord')
 class Reaction {
     constructor(message) {
         this.start(message)
+        this.Suggestions = false
         this.isRestart = false
         this.welcome_message = new discord.bot().welcome_message
         this.error_message = new discord.bot().error_message
@@ -28,13 +29,16 @@ class Reaction {
                     3- if you get out of the voice channel, the bot will automatically restart."
                 }
 
+                const lastMessage = message.channel.messages.cache.get(Array.from(message.channel.messages.cache.keys())[1])
+                if (lastMessage && lastMessage.content.includes("You need to join a voice channel"))
+                    lastMessage.delete()
+
                 message.channel.send({
                     embed: noteEmbed
                 }).catch(err => this.error_message(message.channel, "Error in sending note embed", err))
-                voiceChannel.join()
                 setTimeout(() => {
                     this.voice_record(member, voiceChannel, message.channel)
-                }, 2000);
+                }, 1000);
                 
                 // restart if the user disconnected
                 const setint = setInterval(() => {
@@ -47,10 +51,11 @@ class Reaction {
         })
     }
 
-    voice_record(member, voice, text) {
+    async voice_record(member, voice, text) {
+        const connection = await voice.join()
         const recordEmbed = {
             color: 0x2eb82e,
-            title: 'First we need 10 seconds sample from your voice.',
+            title: 'First we need 9 seconds sample from your voice.',
             description: 'Press ⏺ to start recording.\nIf you are not sure what to say, you can press 📗 to get suggestions.',
             fields: [{
                 name: 'Note:',
@@ -69,6 +74,13 @@ class Reaction {
                 await message.react('🔄')
 
                 message.awaitReactions((reaction, user) => {
+                    // restart if the bot disconnected
+                    const bot = message.guild.members.cache.get(config.id)
+                    setInterval(() => {
+                        !bot.voice.channel &&
+                            this.restart(voice, text)
+                    }, 1000)
+
                     if (user.username !== config.username) {
                         const member2 = message.guild.members.cache.get(user.id)
                         switch(reaction.emoji.name)
@@ -77,7 +89,8 @@ class Reaction {
                                 // start recording
                                 break
                             case '📗':
-                                !this.isRestart && text.send("khkhk")
+                                member.id === member2.id && 
+                                    this.suggestions(text, connection, member)
                                 break
                             case '🔄':
                                 if (member.id === member2.id || member2.permissions.has('KICK_MEMBERS') || member2.permissions.has('BAN_MEMBERS'))
@@ -90,13 +103,29 @@ class Reaction {
             .catch(err => this.error_message(text, "Error in sending record embed", err))
     }
 
-    restart(voiceChannel, textChannel) {
-        if (!this.isRestart) {
-            this.isRestart = true
-            textChannel.send("Restarting...").then(() => {
-                voiceChannel.leave()
-                this.welcome_message(textChannel)
-            }).catch(err => this.error_message(textChannel, "Error in sending restart message", err))
+    suggestions(textChannel, connection, member) {
+        if (!this.Suggestions) {
+            this.Suggestions = true
+            const texts = [
+                "Climb mountains not so the world can see you, but so you can see the world.",
+                "She was an open book to him and he was obsessed with the idea of reading it.",
+                "Learning more about a subject you enjoy and are motivated to study can improve your focus and make you feel happier and more fulfilled.",
+                "The person that you will spend the most time with in your life is yourself, so you better try to make yourself as interesting as possible.",
+                "You learn more from failure than from success; don’t let it stop you. Failure builds character."
+            ]
+            texts.forEach((text, i) => 
+                !this.isRestart && textChannel.send(`📗 ${++i}- ${text}`)
+                    .then(message => {
+                        if (!this.isRestart) {
+                            message.react('📢')
+                            message.awaitReactions((reaction, user) => {
+                                const member2 = message.guild.members.cache.get(user.id)
+                                if (member.id === member2.id && reaction.emoji.name === '📢' && user.username !== config.username)
+                                    connection.play(`suggestions\\${i}.mp3`)
+                            })
+                        }
+                    })
+            )
         }
     }
 
@@ -113,6 +142,16 @@ class Reaction {
         catch (err) {
             channel.send(`<@${user.id}>, You need to join a voice channel.`)
                 .catch(err => this.error_message(channel, "Error in sending join a voice channel message", err))
+        }
+    }
+
+    restart(voiceChannel, textChannel) {
+        if (!this.isRestart) {
+            this.isRestart = true
+            textChannel.send("Restarting...").then(() => {
+                voiceChannel.leave()
+                this.welcome_message(textChannel)
+            }).catch(err => this.error_message(textChannel, "Error in sending restart message", err))
         }
     }
 }
