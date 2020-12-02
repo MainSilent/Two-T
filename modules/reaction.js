@@ -1,3 +1,4 @@
+const fs = require('fs')
 const config = require('../config')
 const discord = require('./discord')
 
@@ -5,7 +6,9 @@ class Reaction {
     constructor(message) {
         this.start(message)
         this.Suggestions = false
+        this.isSuggesting = false
         this.isRestart = false
+        this.isRecording = false
         this.welcome_message = new discord.bot().welcome_message
         this.error_message = new discord.bot().error_message
     }
@@ -55,7 +58,7 @@ class Reaction {
         const connection = await voice.join()
         const recordEmbed = {
             color: 0x2eb82e,
-            title: 'First we need 9 seconds sample from your voice.',
+            title: 'First we need 7 seconds sample from your voice.',
             description: 'Press ⏺ to start recording.\nIf you are not sure what to say, you can press 📗 to get suggestions.',
             fields: [{
                 name: 'Note:',
@@ -81,12 +84,13 @@ class Reaction {
                             this.restart(voice, text)
                     }, 1000)
 
-                    if (user.username !== config.username) {
+                    if (!this.isRestart && !this.isRecording && user.username !== config.username) {
                         const member2 = message.guild.members.cache.get(user.id)
-                        switch(reaction.emoji.name)
+                        switch (reaction.emoji.name)
                         {
                             case '⏺':
-                                // start recording
+                                member.id === member2.id &&
+                                    this.recording(member, text, connection)
                                 break
                             case '📗':
                                 member.id === member2.id && 
@@ -103,9 +107,40 @@ class Reaction {
             .catch(err => this.error_message(text, "Error in sending record embed", err))
     }
 
+    recording(member, text, connection) {
+        this.isRecording = true
+        let count = 0
+        let lastSentMessage
+        const int = setInterval(() => {
+            if (!this.isSuggesting) {
+                clearInterval(int)
+                // we actually need 9 seconds sample
+                // there is one problem, i think discord api blocks when we send 9 edits it lags on 7th edit...
+                // so we increase it by 300 milliseconds and decrease target sample length
+                const setint = setInterval(() => {
+                    count++
+                    const lastMessage = text.lastMessage.content
+                    if (lastMessage && lastMessage.includes("🔴 Recording... "))
+                        lastSentMessage.edit(`🔴 Recording... ${count}`)
+                    else
+                        text.send(`🔴 Recording... ${count}`).then(message => { 
+                            lastSentMessage = message
+                        })
+
+                    // When 9 seconds done
+                    if (count == 7) {
+                        clearInterval(setint)
+                        lastSentMessage.edit("Recording finished, wait a moment...")
+                    }
+                }, 1300)
+            }
+        }, 1000)
+    }
+
     suggestions(textChannel, connection, member) {
-        if (!this.Suggestions) {
+        if (!this.Suggestions && !this.isRecording) {
             this.Suggestions = true
+            this.isSuggesting = true
             const texts = [
                 "Climb mountains not so the world can see you, but so you can see the world.",
                 "She was an open book to him and he was obsessed with the idea of reading it.",
@@ -114,17 +149,18 @@ class Reaction {
                 "You learn more from failure than from success; don’t let it stop you. Failure builds character."
             ]
             texts.forEach((text, i) => 
-                !this.isRestart && textChannel.send(`📗 ${++i}- ${text}`)
-                    .then(message => {
-                        if (!this.isRestart) {
-                            message.react('📢')
-                            message.awaitReactions((reaction, user) => {
-                                const member2 = message.guild.members.cache.get(user.id)
-                                if (member.id === member2.id && reaction.emoji.name === '📢' && user.username !== config.username)
-                                    connection.play(`suggestions\\${i}.mp3`)
-                            })
-                        }
-                    })
+                !this.isRestart && !this.isRecording && 
+                    textChannel.send(`📗 ${++i}- ${text}`)
+                        .then(message => {
+                            if (!this.isRestart) {
+                                message.react('📢').then(() => {if(i === 5) this.isSuggesting = false})
+                                message.awaitReactions((reaction, user) => {
+                                    const member2 = message.guild.members.cache.get(user.id)
+                                    if (member.id === member2.id && reaction.emoji.name === '📢' && user.username !== config.username)
+                                        connection.play(`suggestions\\${i}.mp3`)
+                                })
+                            }
+                        })
             )
         }
     }
