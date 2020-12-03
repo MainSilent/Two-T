@@ -1,15 +1,16 @@
 const fs = require('fs')
 const config = require('../config')
 const discord = require('./discord')
-const { Readable } = require('stream');
-const { exec } = require('child_process');
-  
-const SILENCE_FRAME = Buffer.from([0xF8, 0xFF, 0xFE]);
+const { SV2TTS } = require('./sv2tts') 
+const { Readable } = require('stream')
+const { exec } = require('child_process') 
+
+const SILENCE_FRAME = Buffer.from([0xF8, 0xFF, 0xFE])
   
 class Silence extends Readable {
     _read() {
-        this.push(SILENCE_FRAME);
-        this.destroy();
+        this.push(SILENCE_FRAME)
+        this.destroy()
     }
 }
 
@@ -252,7 +253,7 @@ class Reaction {
                             input = lastmsg.content
                             clearInterval(setint)
 
-                            console.log(input);
+                            new SV2TTS(member, text, connection)
                         }
                     }
                     catch (err) {}

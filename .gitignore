@@ -4,3 +4,25 @@ config.json
 tmp/tts/*
 tmp/samples/*
 tmp/converted/*
+
+# SV2TTS
+*.pyc
+*.aux
+*.log
+*.out
+*.synctex.gz
+*.suo
+*__pycache__
+*.idea
+*.ipynb_checkpoints
+*.pickle
+*.npy
+*.blg
+*.bbl
+*.bcf
+*.toc
+*.wav
+*.sh
+sv2tts/encoder/saved_models/*
+sv2tts/synthesizer/saved_models/*
+sv2tts/vocoder/saved_models/*

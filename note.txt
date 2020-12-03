@@ -7,3 +7,6 @@ and this is for config
     "id"
     "username": "Two T",
     "channel_name": "two-t🦜"
+
+link for sv2tts pretrained models
+https://github.com/CorentinJ/Real-Time-Voice-Cloning/wiki/Pretrained-models
