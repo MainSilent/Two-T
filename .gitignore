@@ -1,2 +1,6 @@
 node_modules
 config.json
+
+tmp/tts/*
+tmp/samples/*
+tmp/converted/*

@@ -1,0 +1,6 @@
+the sv2tt needs to be multithreaded
+and this is for config
+    "token"
+    "id"
+    "username": "Two T",
+    "channel_name": "two-t🦜"

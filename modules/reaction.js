@@ -1,6 +1,17 @@
 const fs = require('fs')
 const config = require('../config')
 const discord = require('./discord')
+const { Readable } = require('stream');
+const { exec } = require('child_process');
+  
+const SILENCE_FRAME = Buffer.from([0xF8, 0xFF, 0xFE]);
+  
+class Silence extends Readable {
+    _read() {
+        this.push(SILENCE_FRAME);
+        this.destroy();
+    }
+}
 
 class Reaction {
     constructor(message) {
@@ -56,9 +67,10 @@ class Reaction {
 
     async voice_record(member, voice, text) {
         const connection = await voice.join()
+        this.deletetmp(member.id)
         const recordEmbed = {
             color: 0x2eb82e,
-            title: 'First we need 7 seconds sample from your voice.',
+            title: 'First we need 9 seconds sample from your voice.',
             description: 'Press ⏺ to start recording.\nIf you are not sure what to say, you can press 📗 to get suggestions.',
             fields: [{
                 name: 'Note:',
@@ -114,27 +126,107 @@ class Reaction {
         const int = setInterval(() => {
             if (!this.isSuggesting) {
                 clearInterval(int)
+                
+                // there is a bug in discordjs that we need to play something to get user audio so we play silent
+                const dispatcher = connection.play(new Silence(), { type: 'opus' })
+                const audio = connection.receiver.createStream(member, { mode: 'pcm', end: 'manual' })
+                audio.pipe(fs.createWriteStream(`./tmp/samples/${member.id}`))
                 // we actually need 9 seconds sample
                 // there is one problem, i think discord api blocks when we send 9 edits it lags on 7th edit...
                 // so we increase it by 300 milliseconds and decrease target sample length
                 const setint = setInterval(() => {
                     count++
-                    const lastMessage = text.lastMessage.content
-                    if (lastMessage && lastMessage.includes("🔴 Recording... "))
-                        lastSentMessage.edit(`🔴 Recording... ${count}`)
-                    else
+                    try {
+                        const lastMessage = text.lastMessage.content
+                        if (lastMessage && lastMessage.includes("🔴 Recording... "))
+                            lastSentMessage.edit(`🔴 Recording... ${count}`)
+                        else
+                            text.send(`🔴 Recording... ${count}`).then(message => { 
+                                lastSentMessage = message
+                            })
+                    }
+                    catch(err) {
                         text.send(`🔴 Recording... ${count}`).then(message => { 
                             lastSentMessage = message
                         })
+                    }
 
                     // When 9 seconds done
-                    if (count == 7) {
+                    if (count == 9) {
                         clearInterval(setint)
                         lastSentMessage.edit("Recording finished, wait a moment...")
+                            .then(() => {
+                                audio.destroy()
+                                dispatcher.pause()
+                            })
+                        // converting the raw audio file to mp3
+                        exec(`ffmpeg -f s16le -ar 48000 -ac 2 -i ./tmp/samples/${member.id} ./tmp/converted/${member.id}.mp3`, err => {
+                            if (err) {
+                                this.error_message(text, "Error in converting raw audio file", err)
+                                return
+                            }
+                            this.sendrecord(member, text, connection)
+                        })
                     }
                 }, 1300)
             }
         }, 1000)
+    }
+
+    sendrecord(member, text, connection) {
+        let playVoice
+        const recordEmbed = {
+            color: 0x2eb82e,
+            title: 'Your voice has been recorded successfully',
+            description: 'Press ▶ to play your recorded voice, then press ✅ to proceed or ❌ to record again.',
+            footer: {
+                text: 'Wait until all 3 reactions get send'
+            },
+            timestamp: new Date()
+        }
+
+        text.send({ embed: recordEmbed })
+            .then(async message => {
+                await message.react('▶')
+                await message.react('✅')
+                await message.react('❌')
+
+                message.awaitReactions((reaction, user) => {
+                    if (!this.isRestart && user.username !== config.username) {
+                        const member2 = message.guild.members.cache.get(user.id)
+                        switch (reaction.emoji.name)
+                        {
+                            case '▶':
+                                if (member.id === member2.id)
+                                    playVoice = connection.play(`./tmp/converted/${member.id}.mp3`)
+                                break
+                            case '✅':
+                                member.id === member2.id && 
+                                    this.suggestions(text, connection, member)
+                                break
+                            case '❌':
+                                if (member.id === member2.id && playVoice._writableState.finished) {
+                                    const last2Messages = text.messages.cache.filter(m => m.author.id === config.id).array().slice(-2)
+                                    last2Messages.forEach(msg => msg.delete())
+                                    this.isRecording = false
+                                    this.deletetmp(member.id, 'mp3')
+                                }
+                                break
+                        }
+                    }
+                })
+            })
+    }
+
+    deletetmp(id, type) {
+        if(type) {
+            type === "mp3" &&
+                fs.unlink(`./tmp/converted/${id}.mp3`, err => err)
+        }
+        else {
+            fs.unlink(`./tmp/samples/${id}`, err => err)
+            fs.unlink(`./tmp/converted/${id}.mp3`, err => err)
+        }
     }
 
     suggestions(textChannel, connection, member) {
