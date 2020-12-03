@@ -1,4 +1,7 @@
-the sv2tt needs to be multithreaded
+the sv2tts needs to be multithreaded
+
+permissions=8336
+
 and this is for config
     "token"
     "id"

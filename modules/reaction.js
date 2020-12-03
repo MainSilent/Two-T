@@ -15,11 +15,20 @@ class Silence extends Readable {
 
 class Reaction {
     constructor(message) {
+        setInterval(() => {
+            message.channel.messages.cache.forEach(message => {
+                message.author.id !== config.id && message.author.id !== this.userid && 
+                    message.delete().catch(err => err)
+            })
+        }, 2000)
+
         this.start(message)
+        this.userid = 0
         this.Suggestions = false
         this.isSuggesting = false
         this.isRestart = false
         this.isRecording = false
+        this.isInput = false
         this.welcome_message = new discord.bot().welcome_message
         this.error_message = new discord.bot().error_message
     }
@@ -70,11 +79,12 @@ class Reaction {
         this.deletetmp(member.id)
         const recordEmbed = {
             color: 0x2eb82e,
-            title: 'First we need 9 seconds sample from your voice.',
+            title: 'First we need 9 seconds sample from your voice',
             description: 'Press ⏺ to start recording.\nIf you are not sure what to say, you can press 📗 to get suggestions.',
             fields: [{
                 name: 'Note:',
-                value: 'The cleaner and louder you talk, The better the TTS samples will be.'
+                value: 'The cleaner and louder you talk, The better the TTS samples will be, \n \
+                and while recording we have to play a silent sound to record your voice.'
             }],
             footer: {
                 text: 'Wait until all 3 reactions get send'
@@ -92,7 +102,7 @@ class Reaction {
                     // restart if the bot disconnected
                     const bot = message.guild.members.cache.get(config.id)
                     setInterval(() => {
-                        !bot.voice.channel &&
+                        !bot.voice.channel && !this.isRecording &&
                             this.restart(voice, text)
                     }, 1000)
 
@@ -192,7 +202,7 @@ class Reaction {
                 await message.react('❌')
 
                 message.awaitReactions((reaction, user) => {
-                    if (!this.isRestart && user.username !== config.username) {
+                    if (!this.isRestart && !this.isInput && user.username !== config.username) {
                         const member2 = message.guild.members.cache.get(user.id)
                         switch (reaction.emoji.name)
                         {
@@ -201,20 +211,52 @@ class Reaction {
                                     playVoice = connection.play(`./tmp/converted/${member.id}.mp3`)
                                 break
                             case '✅':
-                                member.id === member2.id && 
-                                    this.suggestions(text, connection, member)
+                                if (member.id === member2.id) 
+                                    this.input(member, text, connection, playVoice)
                                 break
                             case '❌':
-                                if (member.id === member2.id && playVoice._writableState.finished) {
-                                    const last2Messages = text.messages.cache.filter(m => m.author.id === config.id).array().slice(-2)
-                                    last2Messages.forEach(msg => msg.delete())
-                                    this.isRecording = false
-                                    this.deletetmp(member.id, 'mp3')
+                                if (member.id === member2.id) {
+                                    // i need to do this seperate because of some errors
+                                    if (!playVoice || playVoice._writableState.finished) {
+                                        const last2Messages = text.messages.cache.filter(m => m.author.id === config.id).array().slice(-2)
+                                        last2Messages.reverse().forEach(msg => msg.delete())
+                                        this.isRecording = false
+                                        this.deletetmp(member.id, 'mp3')
+                                    }
                                 }
                                 break
                         }
                     }
                 })
+            })
+    }
+
+    // end method
+    input(member, text, connection, playVoice) {
+        this.isInput = true
+        let input
+        playVoice && playVoice.pause()
+        const writeEmbed = {
+            color: 0x2eb82e,
+            title: 'Now write whatever you want your voice say',
+            description: 'Remember all grammatical symbols have their own effect.',
+            timestamp: new Date()
+        }
+        text.send({ embed: writeEmbed })
+            .then(() => {
+                this.userid = member.id
+                const setint = setInterval(() => {
+                    const lastmsg = text.lastMessage
+                    try {
+                        if (lastmsg.author.id === member.id) {
+                            input = lastmsg.content
+                            clearInterval(setint)
+
+                            console.log(input);
+                        }
+                    }
+                    catch (err) {}
+                }, 1000)
             })
     }
 
