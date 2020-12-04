@@ -86,6 +86,8 @@ class UpsampleNetwork(nn.Module):
 
 
 class WaveRNN(nn.Module):
+    client = ''
+
     def __init__(self, rnn_dims, fc_dims, bits, pad, upsample_factors,
                  feat_dims, compute_dims, res_out_dims, res_blocks,
                  hop_length, sample_rate, mode='RAW'):
@@ -150,7 +152,8 @@ class WaveRNN(nn.Module):
         x = F.relu(self.fc2(x))
         return self.fc3(x)
 
-    def generate(self, mels, batched, target, overlap, mu_law, progress_callback=None):
+    def generate(self, client, mels, batched, target, overlap, mu_law, progress_callback=None):
+        self.client = client
         mu_law = mu_law if self.mode == 'RAW' else False
         progress_callback = progress_callback or self.gen_display
 
@@ -258,7 +261,7 @@ class WaveRNN(nn.Module):
 
 
     def gen_display(self, i, seq_len, b_size, gen_rate):
-        pbar = progbar(i, seq_len)
+        pbar = progbar(self.client, i, seq_len)
         msg = f'| {pbar} {i*b_size}/{seq_len*b_size} | Batch Size: {b_size} | Gen Rate: {gen_rate:.1f}kHz | '
         stream(msg)
 

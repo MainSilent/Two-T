@@ -1,4 +1,6 @@
 the sv2tts needs to be multithreaded
+if there is no audio like when the user is muted there will be problem in sv2tts
+each user needs to have their own folder in tts folder
 
 permissions=8336
 

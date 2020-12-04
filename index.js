@@ -1,5 +1,21 @@
-const discord = require('./modules/discord')
+const fs = require('fs')
+const path = require('path')
 const config = require('./config')
+const discord = require('./modules/discord')
+
+// empty the tmp directories
+const tmpDirs = ['./tmp/converted', './tmp/samples', './tmp/tts']
+tmpDirs.forEach(dir => {
+    fs.readdir(dir, (err, files) => {
+        if (err) throw err
+      
+        for (const file of files) {
+          fs.unlink(path.join(dir, file), err => {
+            if (err) throw err
+          })
+        }
+    })
+})
 
 const bot = new discord.bot(config.token)
 

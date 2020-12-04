@@ -3,10 +3,16 @@ import time
 import numpy as np
 import sys
 
+lastProg = ''
 
-def progbar(i, n, size=16):
+def progbar(client, i, n, size=16):
+    global lastProg
     done = (i * size) // n
     bar = ''
+    n = (i * 21) // n
+    if lastProg != n:
+        lastProg = n
+        client.sendall(bytes(str(n), 'ascii'))
     for i in range(size):
         bar += '█' if i <= done else '░'
     return bar

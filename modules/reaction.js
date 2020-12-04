@@ -253,7 +253,7 @@ class Reaction {
                             input = lastmsg.content
                             clearInterval(setint)
 
-                            new SV2TTS(member, text, connection)
+                            new SV2TTS(member, input, text, connection)
                         }
                     }
                     catch (err) {}

@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "discord.js": "^12.5.1",
-    "opusscript": "0.0.7"
+    "opusscript": "0.0.7",
+    "progress-string": "^1.2.2"
   }
 }

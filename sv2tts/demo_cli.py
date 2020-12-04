@@ -9,11 +9,19 @@ import numpy as np
 import soundfile as sf
 import librosa
 import argparse
+import socket
+import json
 import torch
 import sys
 from audioread.exceptions import NoBackendError
 
 if __name__ == '__main__':
+    # initialize the socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    port = 6359
+    s.bind(('localhost', port))
+    s.listen()
+
     ## Info & args
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
@@ -116,8 +124,6 @@ if __name__ == '__main__':
     # 0.5 seconds which will all be generated together. The parameters here are absurdly short, and 
     # that has a detrimental effect on the quality of the audio. The default parameters are 
     # recommended in general.
-    vocoder.infer_waveform(mel, target=200, overlap=50, progress_callback=no_action)
-    
     print("All test passed! You can now synthesize speech.\n\n")
     
     
@@ -130,10 +136,13 @@ if __name__ == '__main__':
     num_generated = 0
     while True:
         try:
+            # accepting the connection and get the user id
+            print("Waiting for user input...")
+            c, address = s.accept()
+            clientInput = json.loads(c.recv(1024).decode())
+
             # Get the reference audio filepath
-            message = "Reference voice: enter an audio filepath of a voice to be cloned (mp3, " \
-                      "wav, m4a, flac, ...):\n"
-            in_fpath = Path(input(message).replace("\"", "").replace("\'", ""))
+            in_fpath = Path(clientInput['path'].replace("\"", "").replace("\'", ""))
 
             if in_fpath.suffix.lower() == ".mp3" and args.no_mp3_support:
                 print("Can't Use mp3 files please try again:")
@@ -158,7 +167,7 @@ if __name__ == '__main__':
             
             
             ## Generating the spectrogram
-            text = input("Write a sentence (+-20 words) to be synthesized:\n")
+            text = clientInput['text']
             
             # The synthesizer works in batch, so you need to put your data in a list or numpy array
             texts = [text]
@@ -180,7 +189,7 @@ if __name__ == '__main__':
 
             # Synthesizing the waveform is fairly straightforward. Remember that the longer the
             # spectrogram, the more time-efficient the vocoder.
-            generated_wav = vocoder.infer_waveform(spec)
+            generated_wav = vocoder.infer_waveform(spec, c)
             
             
             ## Post-generation
@@ -190,25 +199,14 @@ if __name__ == '__main__':
 
             # Trim excess silences to compensate for gaps in spectrograms (issue #53)
             generated_wav = encoder.preprocess_wav(generated_wav)
-            
-            # Play the audio (non-blocking)
-            if not args.no_sound:
-                try:
-                    sd.stop()
-                    sd.play(generated_wav, synthesizer.sample_rate)
-                except sd.PortAudioError as e:
-                    print("\nCaught exception: %s" % repr(e))
-                    print("Continuing without audio playback. Suppress this message with the \"--no_sound\" flag.\n")
-                except:
-                    raise
                 
             # Save it on the disk
-            filename = "demo_output_%02d.wav" % num_generated
+            filename = "../tmp/tts/%s_%02d.wav" % (clientInput['userid'], num_generated)
             print(generated_wav.dtype)
             sf.write(filename, generated_wav.astype(np.float32), synthesizer.sample_rate)
             num_generated += 1
+            c.sendall(bytes(filename, 'ascii'))
             print("\nSaved output as %s\n\n" % filename)
-            
             
         except Exception as e:
             print("Caught exception: %s" % repr(e))
