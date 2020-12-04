@@ -1,6 +1,9 @@
 const net = require('net')
 const path = require('path')
 const progress = require('progress-string')
+const config = require('../config')
+const discord = require('./discord')
+const { Reaction } = require('./reaction')
 
 var bar = progress({
     width: 24,
@@ -14,6 +17,10 @@ var bar = progress({
 
 class SV2TTS {
     constructor(member, input, text, connection) {
+        this.welcome_message = new discord.bot().welcome_message
+        this.member = member
+        this.text = text
+        this.connection = connection
         this.lastSentMessage
         this.client = new net.Socket()
 
@@ -34,11 +41,9 @@ class SV2TTS {
                 // edit if it has been sent
                 if (lastMessage && lastMessage.includes("Synthesizing the waveform:")) {
                     this.lastSentMessage.edit({ embed: this.progress(data) })
-                        .then(async message => {
-                            if (data.includes('tmp')) {
-                                await message.react('▶')
-                                await message.react('🔄')
-                            }
+                        .then(message => {
+                            if (data.includes('tmp'))
+                                this.react(message, data)
                         })
                 } 
                 // send it if not
@@ -54,6 +59,58 @@ class SV2TTS {
                 })
             }
         })
+    }
+
+    async react(message, path) {
+        await message.react('▶')
+        await message.react('🔄')
+        this.send_input(this.member, this.text, this.connection)
+
+        message.awaitReactions((reaction, user) => {
+            if (user.username !== config.username) {
+                const member2 = message.guild.members.cache.get(user.id)
+                switch (reaction.emoji.name)
+                {
+                    case '▶':
+                        if (this.member.id === member2.id) {
+                            this.connection.play('./tmp/tts/' + path.split('/')[3])
+                        }
+                        break
+                    case '🔄':
+                        if (this.member.id === member2.id || member2.permissions.has('KICK_MEMBERS') || member2.permissions.has('BAN_MEMBERS')) {
+                            this.text.send("Restarting...").then(() => 
+                                this.welcome_message(this.text))
+                        }
+                        break
+                }
+            }
+        })
+    }
+
+    send_input(member, text, connection) {
+        let input
+        const writeEmbed = {
+            color: 0x2eb82e,
+            title: 'Now write whatever you want your voice say',
+            description: 'Remember all grammatical symbols have their own effect.',
+            timestamp: new Date()
+        }
+        text.send({ embed: writeEmbed })
+            .then(() => {
+                this.userid = member.id
+                const setint = setInterval(() => {
+                    const lastmsg = text.lastMessage
+                    try {
+                        if (lastmsg.author.id === member.id) {
+                            input = lastmsg.content
+                            clearInterval(setint)
+
+                            new SV2TTS(member, input, text, connection)
+                        }
+                    }
+                    catch (err) {}
+                }, 1000)
+            })
     }
 
     progress(completed) {
