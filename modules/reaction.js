@@ -162,8 +162,8 @@ class Reaction {
                         })
                     }
 
-                    // When 9 seconds done
-                    if (count == 9) {
+                    // When 17 seconds done
+                    if (count == 17) {
                         clearInterval(setint)
                         lastSentMessage.edit("Recording finished, wait a moment...")
                             .then(() => {
